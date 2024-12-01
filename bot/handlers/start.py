@@ -127,17 +127,20 @@ async def from_whom_handler(call : CallbackQuery , state : FSMContext):
     await call.message.answer("🇺Sahifalar sonini oraliq ko'rinishida tanlang", reply_markup=Sahifalar_soni())
 
 @dp.callback_query(ReferatState.referat_sahifa_soni)
-async def getting_ready(call : CallbackQuery , state : FSMContext):
+async def getting_ready(call: CallbackQuery, state: FSMContext):
     state_data = await state.get_data()
     state_data["referat_sahifa_soni"] = call.data
     await state.set_data(state_data)
+
     warning_message = (
         "❗ Referat tayyorlash uchun balansingizda yetarlicha mablag' mavjud emas.\n\n"
         "Referat narxi:\n"
-        f"• {state_data.get("referat_sahifa_soni")} - 10000 so'm\n\n"
+        f"• {state_data.get('referat_sahifa_soni')} - 10000 so'm\n\n"
         "💰 Balansingiz: 0"
     )
-    await call.answer(warning_message,show_alert=True)
+
+    await call.answer(warning_message, show_alert=True)
+
 
 @dp.message(lambda msg : msg.text == balans_txt)
 async def register_handler(msg: Message, state: FSMContext):
