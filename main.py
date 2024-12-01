@@ -10,6 +10,7 @@ from dispatcher import TOKEN, dp
 from bot.handlers import *
 
 async def main() -> None:
+    requests.post(f'https://api.telegram.org/bot{TOKEN}/deleteWebhook')
     bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
     await dp.start_polling(bot)
 
