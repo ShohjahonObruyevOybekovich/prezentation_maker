@@ -269,10 +269,8 @@ class SlideGeneratorApp(QWidget):
             QMessageBox.critical(self, 'Error', f'An error occurred: {e}')
 
 
-# Assume the rest of your functions (fetch_random_image_url, generate_slide_content, create_presentation) are defined here
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    ex = SlideGeneratorApp()
-    ex.show()
-    sys.exit(app.exec_())
+app = QApplication(sys.argv)
+ex = SlideGeneratorApp()
+ex.show()
+sys.exit(app.exec_())
