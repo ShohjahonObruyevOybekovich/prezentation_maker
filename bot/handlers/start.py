@@ -10,163 +10,172 @@ from sqlalchemy.exc import SQLAlchemyError
 from bot.buttons.inline import *
 from bot.buttons.reply import menu_btn
 from bot.buttons.text import *
-from bot.state.main import UserState, TaklifState, AdminState
+from bot.handlers.ai_utils import *
+from bot.handlers.ppt_utils import create_presentation
+from bot.state.main import PPTState, ReferatState
 from db.connect import session
 from db.model import User
 from dispatcher import dp
-
+from aiogram.types import FSInputFile
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
-    await message.answer_photo(
-        photo='https://telegra.ph/file/4aededade39de77dc3d55.png',
-        caption="Assalomu alaykum ! \nBu bot anonim tarzida ishlaydi. Bu yerda siz shikoyatlar yoki takliflaringizni qoldirishingiz mumkin va biz ularni o'rganib chiqamiz !",
+    await message.answer(
+        text="Assalomu alaykum!\n"
+"📕Taqdimot - tugmasini bosib taqdimot yaratishni boshlashingiz mumkin.\n"
+"📘Referat/Mustaqil ish - Referat yoki Mustaqil ish tayorlash uchun.\n"
+"📃Qo'llanma - botdan qanday foydalanish haqida ma'lumot.\n Iltimos, avval shu bo'lim bilan tanishib chiqing.\n"
+"/info - ma'lumot qidirish uchun."
+"❓Savol va takliflar: @shokh_smee",
         reply_markup=menu_btn()
     )
     query = insert(User).values(chat_id=message.from_user.id)
     session.execute(query)
     session.commit()
 
-
-
-# #shikoyatlar uchun
-@dp.message(lambda msg : msg.text == shikoyat_txt)
+@dp.message(lambda msg : msg.text == presentation_txt)
 async def register_handler(msg : Message , state : FSMContext):
-    await state.set_state(UserState.from_whom)
-    await msg.answer("Shikoyatlaringiz turini tanlang 👇🏿!", reply_markup=from_whom_menu())
+    await state.set_state(PPTState.ppt_name)
+    await msg.answer("Presentatsiya mavzusini 3 ta so'zdan ko'p to'liq va bexato kiriting:")
 
-@dp.callback_query(UserState.from_whom)
-async def from_whom_handler(call : CallbackQuery , state : FSMContext):
-    await call.message.delete()
+
+@dp.message(PPTState.ppt_name)
+async def from_whom_handler(msg : Message , state : FSMContext):
     data = await state.get_data()
-    data["from_whom"] = call.data
+    data["ppt_name"] = msg.text
     await state.set_data(data)
-    await state.set_state(UserState.message)
-    await call.message.answer(text='Shikoyatingizni kiriting ✏️')
+    await state.set_state(PPTState.ppt_slide_count)
+    await msg.answer(text="Presentatsiya slide sonini kiriting(minimum: 8 ta slide) :")
+
+@dp.message(PPTState.ppt_slide_count)
+async def ppt_slide_number(msg :Message , state : FSMContext):
+    data = await state.get_data()
+    data["ppt_slide_count"] = msg.text
+    topic = msg.text.strip()
+    ppt_slide_titles = generate_slide_title(slide_number=data["ppt_slide_count"],
+                                            previous_titles=data.get('ppt_name'),
+                                            api_key=OPENAI_API_KEY,
+                                            prompt=data.get('ppt_name'))
+    presentation_content = generate_unique_slide_content(api_key=OPENAI_API_KEY,
+                                                         slide_title=ppt_slide_titles,
+                                                         prompt=data.get('ppt_name'),
+                                                         )
+    ppt_ready = create_presentation(data.get('ppt_name'),
+                                    data["ppt_slide_count"],
+                                    OPENAI_API_KEY,
+                                    OPENAI_API_KEY)
+    await msg.answer(f"Creating a presentation for: {topic}...")
 
 
-@dp.message(lambda msg : msg.text == secret_key_admin)
+
+    if not ppt_ready:
+        await msg.answer("Sorry, I couldn't generate content for your topic. Please try again.")
+        return
+
+    # Create presentation
+    filename = create_presentation(topic, ppt_ready)
+
+    # Send the generated presentation
+    file = FSInputFile(filename)
+    await msg.answer_document(file)
+    await msg.answer("Here is your presentation!")
+    await state.clear()
+
+
+
+
+@dp.message(lambda msg : msg.text == referat_mustaqil_ish_txt)
 async def register_handler(msg: Message, state: FSMContext):
-    query = update(User).where(User.chat_id == msg.from_user.id).values(user_role='admin')
-    session.execute(query)
-    session.commit()
-    await msg.answer(text="Sizning ID ma'lumotingiz saqlandi 😊",reply_markup=menu_btn())
+    await msg.answer(text="Malumotlar bexato ekanligiga ishonch xosil qiling\n")
+    await state.set_state(ReferatState.univer_name)
+    await msg.answer(text="Institut va kafedrangizni to'liq kiriting.\n"
+"📋Namuna: FARG‘ONA POLITEXNIKA INSTITUTI KIMYO TEXNALOGIYA KAFEDRASI")
 
-@dp.message(UserState.message)
+
+@dp.message(ReferatState.univer_name)
 async def message_callback(msg: Message, state: FSMContext):
     state_data = await state.get_data()
-    state_data["message"] = msg.text
-    user_messages = state_data.get("from_whom")  # Ensure to handle potential absence of key
-    chat_id = msg.from_user.id
+    state_data["univer_name"] = msg.text
+    await state.set_data(state_data)
+    await state.set_state(ReferatState.referat_mavzusi)
+    await msg.answer("Referat mavzusini kiriting:")
 
-    try:
-        # Retrieve admin IDs from the database
-        Admin_id_list:list = session.execute(select(User.chat_id).where(User.user_role == 'admin')).fetchall()
+@dp.message(ReferatState.referat_mavzusi)
+async def message_callback(msg: Message, state: FSMContext):
+    state_data = await state.get_data()
+    state_data["referat_mavzusi"] = msg.text
+    await state.set_data(state_data)
+    await state.set_state(ReferatState.referat_muallif)
+    await msg.answer("Muallif ism-familiyasi, guruhi va hokazolarni to'liq kiriting.\n\n"
+"📋Namuna: Aliyev Alibek, 4-kurs, 23-guruh")
 
-        def remove_similar_strings(Admin_id_list):
-            # Sort the list of Admin_id_list
-            Admin_id_list.sort()
+@dp.message(ReferatState.referat_muallif)
+async def message_callback(msg: Message, state: FSMContext):
+    state_data = await state.get_data()
+    state_data["referat_muallif"] = msg.text
+    await state.set_data(state_data)
+    await state.set_state(ReferatState.referat_tili)
+    await msg.answer("🇺🇿 Tilni tanlang",reply_markup=TIL())
 
-            # Initialize a result list with the first string
-            result = [Admin_id_list[0]]
-
-            # Iterate through the sorted list, skipping duplicates
-            for i in range(1, len(Admin_id_list)):
-                # If the current string is different from the previous one, add it to the result list
-                if Admin_id_list[i] != Admin_id_list[i - 1]:
-                    result.append(Admin_id_list[i])
-
-            return result
-
-
-        # Prepare product string
-        database_data = session.execute(select(User.id, User.received_date).where(User.chat_id == chat_id)).fetchone()
-        product = f"Message ID: {database_data[0]}\n\n"
-        product += f"Kim haqida: {user_messages}\n\n"
-        product += f"Xabar matni: {msg.text}\n\n"
-        product += f"Yuborilgan sana: {database_data[1]}\n\n"
-
-        # Insert user message into the database
-        session.execute(
-            insert(User).values(chat_id=int(chat_id), message_category=user_messages, user_messages=msg.text))
-        session.commit()
-
-        # Send messages to each admin
-        for admin_data in remove_similar_strings(Admin_id_list):
-            admin_chat_id = admin_data[0]
-            ic(admin_chat_id)
-            await msg.bot.send_message(admin_chat_id, text=product, reply_markup=menu_btn())
-
-        await msg.bot.send_message(chat_id, text='Xabar yuborildi!', reply_markup=menu_btn())
-        await state.clear()
-    except SQLAlchemyError as e:
-        # Handle any database errors
-        ic(e)
-        await msg.answer(text='Xatolik yuz berdi!', reply_markup=menu_btn())
-
-
-# takliflar uchun
-@dp.message(lambda msg : msg.text == taklif_txt)
-async def takliflar_handler(msg : Message , state : FSMContext):
-    await state.set_state(TaklifState.from_whom)
-    await msg.answer("Takliflaringiz turini tanlang 👇🏿!", reply_markup=takliflar_from_whom_menu())
-
-@dp.callback_query(TaklifState.from_whom)
+@dp.callback_query(ReferatState.referat_tili)
 async def from_whom_handler(call : CallbackQuery , state : FSMContext):
     await call.message.delete()
     data = await state.get_data()
-    data["from_whom"] = call.data
+    data["referat_tili"] = call.data
     await state.set_data(data)
-    await state.set_state(UserState.message)
-    await call.message.answer(text='Taklifingizni kiriting ✏️')
+    await state.set_state(ReferatState.referat_sahifa_soni)
+    await call.message.answer("🇺Sahifalar sonini oraliq ko'rinishida tanlang", reply_markup=Sahifalar_soni())
 
-@dp.message(TaklifState.message)
-async def message_callback(msg: Message, state: FSMContext):
+@dp.callback_query(ReferatState.referat_sahifa_soni)
+async def getting_ready(call : CallbackQuery , state : FSMContext):
     state_data = await state.get_data()
-    state_data["message"] = msg.text
-    user_messages = state_data.get("from_whom")  # Ensure to handle potential absence of key
-    chat_id = msg.from_user.id
+    state_data["referat_sahifa_soni"] = call.data
+    await state.set_data(state_data)
+    warning_message = (
+        "❗ Referat tayyorlash uchun balansingizda yetarlicha mablag' mavjud emas.\n\n"
+        "Referat narxi:\n"
+        f"• {state_data.get("referat_sahifa_soni")} - 10000 so'm\n\n"
+        "💰 Balansingiz: 0"
+    )
+    await call.answer(warning_message,show_alert=True)
 
-    try:
-        # Retrieve admin IDs from the database
-        Admin_id_list = session.execute(select(User.chat_id).where(User.user_role == 'admin')).fetchall()
+@dp.message(lambda msg : msg.text == balans_txt)
+async def register_handler(msg: Message, state: FSMContext):
+    await msg.answer(text="💰Balansingiz: 0 so'm\n"
+"/referal - do'stlarni taklif qilib balansni to'ldirish🔗\n"
+"/my - barcha ma'lumotlaringiz.\n\n"
+"Balansingizda pul qolmagan. Balansingizni 2xil usulda to'ldirishingiz mumkin:\n\n"
 
-        def remove_similar_strings(Admin_id_list):
-            # Sort the list of Admin_id_list
-            Admin_id_list.sort()
+"1. Bepul - /referal buyrug'ini yuboring, do'stlaringizni taklif qiling. Har bir botga qo'shilgan do'stingiz uchun 1000 so'mdan oling!"
+"2. To'lov usulida - /buy buyrug'ini yuboring va kartaga to'lov qilib chekni yuboring!")
 
-            # Initialize a result list with the first string
-            result = [Admin_id_list[0]]
+@dp.message(lambda msg : msg.text == referal_txt)
+async def register_handler(msg: Message, state: FSMContext):
+    user_id = msg.from_user.id
+    user = session.query(User).filter(User.chat_id == user_id).first()
+    if user:    # Generate referral link
+        referral_url = f"https://t.me/share/url?url=/https://t.me/rxso_testbot?start={user_id}"
 
-            # Iterate through the sorted list, skipping duplicates
-            for i in range(1, len(Admin_id_list)):
-                # If the current string is different from the previous one, add it to the result list
-                if Admin_id_list[i] != Admin_id_list[i - 1]:
-                    result.append(Admin_id_list[i])
+        await msg.reply(
+            f"🔗 Sizning referal linkingiz:\n{referral_url}\n\n"
+            f"Do'stlaringizni taklif qiling va har bir yangi foydalanuvchi uchun 5000 so'mga ega bo'ling!"
+        ,
+        reply_markup=send())
 
-            return result
 
-        # Prepare product string
-        database_data = session.execute(select(User.id, User.received_date).where(User.chat_id == chat_id)).fetchone()
-        product = f"Message ID: {database_data[0]}\n\n"
-        product += f"Nima haqida: {user_messages}\n\n"
-        product += f"Xabar matni: {msg.text}\n\n"
-        product += f"Yuborilgan sana: {database_data[1]}\n\n"
+@dp.message(lambda msg : msg.text == balans_txt)
+async def register_handler(msg: Message, state: FSMContext):
+    await msg.answer(text="💰Balansingiz: 0 so'm\n"
+"/referal - do'stlarni taklif qilib balansni to'ldirish🔗\n"
+"/my - barcha ma'lumotlaringiz.\n\n"
+"Balansingizda pul qolmagan. Balansingizni 2xil usulda to'ldirishingiz mumkin:\n\n"
 
-        # Insert user message into the database
-        session.execute(insert(User).values(chat_id=chat_id, message_category=user_messages, user_messages=msg.text))
-        session.commit()
+"1. Bepul - /referal buyrug'ini yuboring, do'stlaringizni taklif qiling. Har bir botga qo'shilgan do'stingiz uchun 1000 so'mdan oling!"
+"2. To'lov usulida - /buy buyrug'ini yuboring va kartaga to'lov qilib chekni yuboring!")
 
-        # Send messages to each admin
-        for admin_data in remove_similar_strings(Admin_id_list):
-            admin_chat_id = admin_data[0]
-            ic(admin_chat_id)
-            await msg.bot.send_message(admin_chat_id, text=product, reply_markup=menu_btn())
-
-        await msg.bot.send_message(chat_id, text='Xabar yuborildi!', reply_markup=menu_btn())
-        await state.clear()
-    except SQLAlchemyError as e:
-        # Handle any database errors
-        ic(e)
-        await msg.answer(text='Xatolik yuz berdi!', reply_markup=menu_btn())
-
+@dp.message(lambda msg : msg.text == buy_txt)
+async def register_handler(msg: Message, state: FSMContext):
+        await msg.reply(
+            "Qaysi usulda to'lov qilmoqchisiz❓ Quyidagi tugmalardan foydalaning👇"
+        ,
+        reply_markup=buy_method())
