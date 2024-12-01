@@ -60,24 +60,24 @@ async def ppt_slide_number(msg :Message , state : FSMContext):
                                                          slide_title=ppt_slide_titles,
                                                          prompt=data.get('ppt_name'),
                                                          )
-    ppt_ready = create_presentation(data.get('ppt_name'),
-                                    data["ppt_slide_count"],
-                                    OPENAI_API_KEY,
-                                    OPENAI_API_KEY)
+    # ppt_ready = create_presentation(data.get('ppt_name'),
+    #                                 data["ppt_slide_count"],
+    #                                 OPENAI_API_KEY,
+    #                                 OPENAI_API_KEY)
     await msg.answer(f"Creating a presentation for: {topic}...")
 
 
 
-    if not ppt_ready:
-        await msg.answer("Sorry, I couldn't generate content for your topic. Please try again.")
-        return
-
-    # Create presentation
-    filename = create_presentation(topic, ppt_ready)
-
-    # Send the generated presentation
-    file = FSInputFile(filename)
-    await msg.answer_document(file)
+    # if not ppt_ready:
+    #     await msg.answer("Sorry, I couldn't generate content for your topic. Please try again.")
+    #     return
+    #
+    # # Create presentation
+    # filename = create_presentation(topic, ppt_ready)
+    #
+    # # Send the generated presentation
+    # file = FSInputFile(filename)
+    # await msg.answer_document(file)
     await msg.answer("Here is your presentation!")
     await state.clear()
 

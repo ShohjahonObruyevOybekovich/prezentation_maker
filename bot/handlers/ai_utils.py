@@ -11,7 +11,7 @@ from pptx.dml.color import RGBColor
 import io
 import urllib.request
 import sys
-from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox)
+# from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox)
 import uuid
 import re
 from dotenv import load_dotenv
@@ -222,55 +222,55 @@ def create_presentation(prompt, num_slides, api_key_unsplash, api_key_openai):
     print(f"Presentation saved as: {file_name}")
 
 
-class SlideGeneratorApp(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle('PowerPoint Slide Generator')
-        self.setGeometry(300, 300, 400, 200)  # x, y, width, height
-
-        layout = QVBoxLayout(self)
-
-        # Topic label and entry
-        label_topic = QLabel('Enter Topic:', self)
-        self.entry_topic = QLineEdit(self)
-
-        # Number of slides label and combo box
-        label_slides = QLabel('Select Number of Slides:', self)
-        self.combo_slides = QComboBox(self)
-        self.combo_slides.addItems(['1', '2', '3', '4', '5'])
-
-        # Generate button
-        self.generate_button = QPushButton('Generate Presentation', self)
-        self.generate_button.clicked.connect(self.on_generate_button_click)
-
-        # Add widgets to layout
-        layout.addWidget(label_topic)
-        layout.addWidget(self.entry_topic)
-        layout.addWidget(label_slides)
-        layout.addWidget(self.combo_slides)
-        layout.addWidget(self.generate_button)
-
-        # Set the layout on the application's window
-        self.setLayout(layout)
-
-    def on_generate_button_click(self):
-        topic = self.entry_topic.text()
-        num_slides = int(self.combo_slides.currentText())
-        try:
-            # Now passing the required API keys to the function
-            create_presentation(topic, num_slides, UNSPLASH_API_KEY, OPENAI_API_KEY)
-            QMessageBox.information(self, 'Success', 'Presentation generated successfully.')
-        except ValueError as e:
-            QMessageBox.critical(self, 'Error', 'Please enter a valid number for the number of slides.')
-        except Exception as e:
-            QMessageBox.critical(self, 'Error', f'An error occurred: {e}')
-
-
-
-app = QApplication(sys.argv)
-ex = SlideGeneratorApp()
-ex.show()
-sys.exit(app.exec_())
+# class SlideGeneratorApp(QWidget):
+#     def __init__(self):
+#         super().__init__()
+#         self.initUI()
+#
+#     def initUI(self):
+#         self.setWindowTitle('PowerPoint Slide Generator')
+#         self.setGeometry(300, 300, 400, 200)  # x, y, width, height
+#
+#         layout = QVBoxLayout(self)
+#
+#         # Topic label and entry
+#         label_topic = QLabel('Enter Topic:', self)
+#         self.entry_topic = QLineEdit(self)
+#
+#         # Number of slides label and combo box
+#         label_slides = QLabel('Select Number of Slides:', self)
+#         self.combo_slides = QComboBox(self)
+#         self.combo_slides.addItems(['1', '2', '3', '4', '5'])
+#
+#         # Generate button
+#         self.generate_button = QPushButton('Generate Presentation', self)
+#         self.generate_button.clicked.connect(self.on_generate_button_click)
+#
+#         # Add widgets to layout
+#         layout.addWidget(label_topic)
+#         layout.addWidget(self.entry_topic)
+#         layout.addWidget(label_slides)
+#         layout.addWidget(self.combo_slides)
+#         layout.addWidget(self.generate_button)
+#
+#         # Set the layout on the application's window
+#         self.setLayout(layout)
+#
+#     def on_generate_button_click(self):
+#         topic = self.entry_topic.text()
+#         num_slides = int(self.combo_slides.currentText())
+#         try:
+#             # Now passing the required API keys to the function
+#             create_presentation(topic, num_slides, UNSPLASH_API_KEY, OPENAI_API_KEY)
+#             QMessageBox.information(self, 'Success', 'Presentation generated successfully.')
+#         except ValueError as e:
+#             QMessageBox.critical(self, 'Error', 'Please enter a valid number for the number of slides.')
+#         except Exception as e:
+#             QMessageBox.critical(self, 'Error', f'An error occurred: {e}')
+#
+#
+#
+# app = QApplication(sys.argv)
+# ex = SlideGeneratorApp()
+# ex.show()
+# sys.exit(app.exec_())
