@@ -1,3 +1,5 @@
+from os import getenv
+
 import openai
 import requests
 import random
@@ -12,10 +14,13 @@ import sys
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox)
 import uuid
 import re
-
+from dotenv import load_dotenv
+load_dotenv()
 # Define your API keys (replace with your actual keys)
 UNSPLASH_API_KEY = 'unsplash_key_goes_here'
-OPENAI_API_KEY = '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'
+
+
+OPENAI_API_KEY = getenv('OPENAI_API_KEY')
 
 # Define these at the top of your script, after your imports
 MAX_BULLETS = 3  # Limit the number of bullet points
