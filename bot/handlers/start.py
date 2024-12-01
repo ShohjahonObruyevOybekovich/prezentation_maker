@@ -131,11 +131,11 @@ async def getting_ready(call: CallbackQuery, state: FSMContext):
     state_data = await state.get_data()
     state_data["referat_sahifa_soni"] = call.data
     await state.set_data(state_data)
-
+    sahifa_soni = call.data
     warning_message = (
                           "❗ Referat tayyorlash uchun balansingizda yetarlicha mablag' mavjud emas.\n\n"
                           "Referat narxi:\n"
-                          f"• {state_data['referat_sahifa_soni']} - 10000 so'm\n\n"
+                          f"• {sahifa_soni} - 10000 so'm\n\n"
         "💰 Balansingiz: 0"
     )
     await call.answer(warning_message, show_alert=True)
